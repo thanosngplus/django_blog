@@ -26,14 +26,17 @@ class BlogTests(TestCase):
 
     def test_url_exists_at_correct_location_listview(self):
         response = self.client.get("/")
+
         self.assertEqual(response.status_code, 200)
 
     def test_url_exists_at_correct_location_detailview(self):
         response = self.client.get("/post/1/")
+
         self.assertEqual(response.status_code, 200)
 
     def test_post_listview(self):
         response = self.client.get(reverse("home"))
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Nice body content")
         self.assertTemplateUsed(response, "home.html")
@@ -41,7 +44,40 @@ class BlogTests(TestCase):
     def test_post_detailview(self):
         response = self.client.get(reverse("post_detail", kwargs={"pk": self.post.pk}))
         no_response = self.client.get("/post/100000/")
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(no_response.status_code, 404)
         self.assertContains(response, "A good title")
         self.assertTemplateUsed(response, "post_detail.html")
+
+    def test_post_createview(self):
+        title = "new title"
+        body = "new text"
+        response = self.client.post(reverse("post_new"), {
+            "title": title,
+            "body": body,
+            "author": self.user.id,
+        })
+
+        self.assertEqual(response.status_code, 302)
+        new_post = Post.objects.last()
+        self.assertEqual(new_post.title, title)
+        self.assertEqual(new_post.body, body)
+
+    def test_post_updateview(self):
+        response = self.client.post(
+            reverse("post_edit", args="1"),
+            {
+                "title": "Updated title",
+                "body": "Updated text",
+            }
+        )
+        
+        updated_post = Post.objects.last()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(updated_post.title, "Updated title")
+        self.assertEqual(updated_post.body, "Updated text")
+
+    def test_post_deleteview(self):
+        response = self.client.post(reverse("post_delete", args="1"))
+        self.assertEqual(response.status_code, 302)
